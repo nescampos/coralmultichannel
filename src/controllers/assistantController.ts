@@ -30,9 +30,9 @@ function parseParams(paramsRaw: string): Record<string, any> {
 export class AssistantController {
   static async handleMessage(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { from, text, provider } = parseMessage(request.body);
+      const { from, text, provider, isAudio } = await parseMessage(request.body);
       const responseText = await messageService.processUserMessage(provider, from, text);
-      await sendMessage(provider, from, responseText, reply);
+      await sendMessage(provider, from, responseText, reply, isAudio);
       if (provider !== 'twilio') {
         reply.send({ success: true });
       }

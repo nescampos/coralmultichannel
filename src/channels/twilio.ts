@@ -1,8 +1,11 @@
 import { FastifyReply } from 'fastify';
-const twilio = require('twilio');
+import twilio from 'twilio';
+import { speechToText, textToSpeech } from '../services/ai/speech';
+import { uploadAudioAndGetUrl } from '../services/audio/uploadService';
 
 export const CHANNEL_TYPE = 'whatsapp';
 
+const allowAudioFiles = process.env.TWILIO_ALLOW_AUDIO_FILES === 'true';
 // Normaliza el número de Twilio a formato internacional con +
 function normalizeTwilioNumber(input: string): string {
   if (input.startsWith('whatsapp:')) input = input.replace('whatsapp:', '');
@@ -15,23 +18,40 @@ function formatForTwilio(phone: string): string {
   return 'whatsapp:' + phone;
 }
 
-export function parseTwilioMessage(body: any) {
+export async function parseTwilioMessage(body: any) {
+  
+  let mediaUrl = null;
+  let text = body.Body;
+  let isAudio = false;
+  if (allowAudioFiles && body.NumMedia && parseInt(body.NumMedia) > 0 && body.MediaContentType0.includes("audio")) {
+    mediaUrl = body.MediaUrl0;
+    text = await speechToText(mediaUrl);
+    isAudio = true;
+  }
   return {
     from: normalizeTwilioNumber(body.From),
-    text: body.Body,
-    provider: 'twilio'
+    text: text,
+    provider: 'twilio',
+    isAudio: isAudio
   };
 }
 
-export async function sendTwilioMessage(to: string, text: string, reply?: FastifyReply) {
+export async function sendTwilioMessage(to: string, text: string, reply?: FastifyReply, isAudio?: boolean) {
   const formattedTo = formatForTwilio(to);
   // Si se pasa el objeto reply, usa ResponseHandler para responder en formato TwiML
   if (reply) {
-    sendSuccess(reply, text);
+    if (isAudio) {
+      // Convertir texto a audio
+      const audioBuffer = await textToSpeech(text);
+      // Subir archivo de audio y obtener URL
+      const audioUrl = await uploadAudioAndGetUrl(audioBuffer);
+      // Enviar mensaje con audio
+      sendSuccessWithMedia(reply, audioUrl);
+    } else {
+      sendSuccess(reply, text);
+    }
     return;
   }
-  // Si no, aquí podrías implementar el envío activo usando la API de Twilio si lo necesitas
-  // Ejemplo: await twilioClient.messages.create({ to: formattedTo, body: text, ... });
 }
 
 function sendSuccess(reply: FastifyReply, message: string): void {
@@ -41,9 +61,23 @@ function sendSuccess(reply: FastifyReply, message: string): void {
       .send(createTwiml(message));
 }
 
+function sendSuccessWithMedia(reply: FastifyReply, mediaUrl: string): void {
+  reply
+      .type('text/xml')
+      .header('Cache-Control', 'private, no-cache')
+      .send(createTwimlWithMedia(mediaUrl));
+}
+
 function createTwiml(message: string): string {
   const twiml = new twilio.twiml.MessagingResponse();
   twiml.message(message);
+  return twiml.toString();
+}
+
+function createTwimlWithMedia(mediaUrl: string): string {
+  const twiml = new twilio.twiml.MessagingResponse();
+  const msg = twiml.message("");
+  msg.media(mediaUrl);
   return twiml.toString();
 }
 

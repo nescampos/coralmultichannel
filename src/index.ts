@@ -4,6 +4,7 @@ import { serverConfig, serverListenConfig } from './config/server';
 import { assistantRequestSchema } from './schemas/requestSchemas';
 import { ServerLifecycle } from './utils/serverLifecycle';
 import { AssistantController } from './controllers/assistantController';
+import path from 'path';
 
 async function startServer() {
     // Initialize Fastify with configuration
@@ -11,6 +12,11 @@ async function startServer() {
 
     // Register plugins
     await fastify.register(formbody);
+
+    await fastify.register(require('@fastify/static'), {
+        root: path.join(__dirname, '../uploads'),
+        prefix: '/uploads/',
+    });
 
     // Initialize database
     await ServerLifecycle.initializeDatabase();

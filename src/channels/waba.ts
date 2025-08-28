@@ -10,12 +10,13 @@ function formatForWaba(phone: string): string {
   return phone.replace(/^\+/, '');
 }
 
-export function parseWabaMessage(body: any) {
+export async function parseWabaMessage(body: any) {
   const msg = body.messages?.[0];
   return {
     from: normalizeWabaNumber(msg?.from),
     text: msg?.text?.body,
-    provider: 'waba'
+    provider: 'waba',
+    isAudio: false
   };
 }
 
