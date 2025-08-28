@@ -40,7 +40,7 @@ export async function sendTwilioMessage(to: string, text: string, reply?: Fastif
   const formattedTo = formatForTwilio(to);
   // Si se pasa el objeto reply, usa ResponseHandler para responder en formato TwiML
   if (reply) {
-    if (isAudio) {
+    if (isAudio && allowAudioFiles) {
       // Convertir texto a audio
       const audioBuffer = await textToSpeech(text);
       // Subir archivo de audio y obtener URL
