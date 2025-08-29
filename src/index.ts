@@ -5,6 +5,7 @@ import { assistantRequestSchema } from './schemas/requestSchemas';
 import { ServerLifecycle } from './utils/serverLifecycle';
 import { AssistantController } from './controllers/assistantController';
 import path from 'path';
+import { WebRTCServer } from './services/webrtc/websocketServer';
 
 async function startServer() {
     // Initialize Fastify with configuration
@@ -30,7 +31,14 @@ async function startServer() {
     try {
         await fastify.listen(serverListenConfig);
         console.log(`Server running at http://${serverListenConfig.host}:${serverListenConfig.port}/`);
+        // Inicializar servidor WebSocket para WebRTC después de que Fastify esté corriendo
+        if(serverListenConfig.webrtc.port !== undefined){
+            new WebRTCServer(serverListenConfig.webrtc.port);
+            console.log(`WebRTC WebSocket server initialized on port ${serverListenConfig.webrtc.port}`);
+        }
+        
     } catch (err) {
+        console.log(err);
         fastify.log.error(err);
         process.exit(1);
     }

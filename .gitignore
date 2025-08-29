@@ -45,6 +45,7 @@ coverage/
 .temp/
 tmp/
 temp/
+uploads/
 
 # Debug
 .debug/

@@ -15,22 +15,29 @@ const voiceId = process.env.ELEVENLABS_VOICE_ID || "";
 
 const elevenlabs = new ElevenLabsClient(elevenLabsOptions);
 
-export async function speechToText(audioFileUrl: string) {
-
+export async function speechToText(audioFileUrl: string | Buffer) {
+  let audioBlob: Blob;
+  
+  if (typeof audioFileUrl === 'string') {
+    // Si es una URL, hacer fetch
     const response = await fetch(audioFileUrl);
-    const audioBlob = new Blob([await response.arrayBuffer()], { type: "audio/mp3" });
-    
-    const transcription = await elevenlabs.speechToText.convert({
-        file: audioBlob,
-        modelId: "scribe_v1", // Model to use, for now only "scribe_v1" is supported.
-        tagAudioEvents: false, // Tag audio events like laughter, applause, etc.
-        //languageCode: "eng", // Language of the audio file. If set to null, the model will detect the language automatically.
-        //diarize: true, // Whether to annotate who is speaking
-    }) as SpeechToTextChunkResponseModel;
-    if(transcription.text){
-        return transcription.text;
-    }
-    return null;
+    audioBlob = new Blob([await response.arrayBuffer()], { type: "audio/mp3" });
+  } else {
+    // Si es un Buffer, crear Blob directamente
+    const uint8Array = new Uint8Array(audioFileUrl);
+    audioBlob = new Blob([uint8Array], { type: "audio/webm" });
+  }
+  
+  const transcription = await elevenlabs.speechToText.convert({
+    file: audioBlob,
+    modelId: "scribe_v1",
+    tagAudioEvents: false,
+  }) as SpeechToTextChunkResponseModel;
+  
+  if(transcription.text){
+    return transcription.text;
+  }
+  return null;
 }
 
 export async function textToSpeech(text: string) {

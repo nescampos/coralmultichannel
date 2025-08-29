@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Llamada de Voz - Asistente Virtual</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .call-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #start-call {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #end-call {
+            background-color: #f44336;
+            color: white;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .conversation {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            text-align: right;
+        }
+        .assistant-message {
+            background-color: #e9ecef;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="call-container">
+        <h1>Llamada de Voz con Asistente Virtual</h1>
+        
+        <div class="controls">
+            <button id="start-call">🔗 Iniciar Llamada</button>
+            <button id="end-call" disabled>🚫 Terminar Llamada</button>
+        </div>
+        
+        <div id="status" class="status disconnected">Desconectado</div>
+        
+        <div class="conversation" id="conversation">
+            <div class="message assistant-message">
+                Haz clic en "Iniciar Llamada" para comenzar a hablar con el asistente.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let ws;
+        let sessionId;
+        let isRecording = false;
+
+        function updateStatus(message, isConnected = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${isConnected ? 'connected' : 'disconnected'}`;
+        }
+
+        function addMessage(text, isUser = false) {
+            const conversation = document.getElementById('conversation');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            messageDiv.textContent = text;
+            conversation.appendChild(messageDiv);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+
+        document.getElementById('start-call').onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                // Conectar WebSocket al puerto separado
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//localhost:3001/voice`;
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    sessionId = Math.random().toString(36).substring(2, 15);
+                    ws.send(JSON.stringify({
+                        type: 'call_start',
+                        sessionId: sessionId,
+                        userId: 'user-' + Date.now()
+                    }));
+                    
+                    updateStatus('Conectado - Habla ahora', true);
+                    document.getElementById('start-call').disabled = true;
+                    document.getElementById('end-call').disabled = false;
+                    
+                    // Iniciar grabación
+                    startRecording(stream);
+                };
+
+                ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    
+                    if (response.type === 'audio_response') {
+                        addMessage(response.text, false);
+                        playAudio(response.audioUrl);
+                    } else if (response.type === 'call_started') {
+                        addMessage('Llamada iniciada. Puedes comenzar a hablar.', false);
+                    } else if (response.type === 'error') {
+                        addMessage(`Error: ${response.error}`, false);
+                    }
+                };
+
+                ws.onclose = () => {
+                    updateStatus('Desconectado');
+                    stopRecording();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('Error de conexión');
+                };
+
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus('Error al acceder al micrófono');
+            }
+        };
+
+        function startRecording(stream) {
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN && isRecording) {
+                    // Convertir Blob a base64
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64Data = reader.result.split(',')[1]; // Remover el prefijo data:audio/webm;base64,
+                        
+                        ws.send(JSON.stringify({
+                            type: 'audio',
+                            sessionId: sessionId,
+                            userId: 'user-' + Date.now(),
+                            audioData: base64Data
+                        }));
+                    };
+                    reader.readAsDataURL(event.data);
+                }
+            };
+
+            mediaRecorder.start(3000); // Enviar cada 3 segundos
+            isRecording = true;
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+            }
+        }
+
+        function playAudio(audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(error => {
+                console.error('Error playing audio:', error);
+            });
+        }
+
+        document.getElementById('end-call').onclick = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'call_end',
+                    sessionId: sessionId,
+                    userId: 'user-' + Date.now()
+                }));
+                ws.close();
+            }
+            
+            stopRecording();
+            updateStatus('Desconectado');
+            document.getElementById('start-call').disabled = false;
+            document.getElementById('end-call').disabled = true;
+            addMessage('Llamada terminada.', false);
+        };
+    </script>
+</body>
+</html>

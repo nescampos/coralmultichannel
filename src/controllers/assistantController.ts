@@ -42,6 +42,8 @@ export class AssistantController {
   }
 
   static async processAIMessage(provider: string, externalId: string, text: string, name?: string): Promise<string> {
+    //console.log('Processing AI message:', { provider, externalId, text }); // Debug log
+    
     // Recuperar historial reciente
     const channelType = CHANNEL_META_MAP[provider]?.CHANNEL_TYPE || provider;
     const recentMessages = await db.getRecentMessagesByProvider(channelType, externalId, historySize);
@@ -53,6 +55,7 @@ export class AssistantController {
       ...history,
       { role: 'user', content: text }
     ];
+    
     let response = await openai.chat.completions.create({
       model,
       messages,
@@ -60,11 +63,19 @@ export class AssistantController {
       temperature: modelTemperature
     });
     let content = response.choices[0].message?.content ?? '';
-    const toolCallMatch = content.match(/^\[TOOL_CALL\]\s*(\w+)\((.*)\)$/);
+    
+    // More flexible regex to match tool calls
+    // This will match formats like:
+    // [TOOL_CALL] get_status()
+    // [get_status()]
+    // get_status()
+    const toolCallMatch = content.match(/(?:$[^$]*$(?:\s*))?(\w+)\(([^)]*)\)/);
     if (toolCallMatch) {
       const [, toolName, paramsRaw] = toolCallMatch;
-      const tool = tools[toolName];
-      if (!tool) throw new Error(`Tool ${toolName} not found`);
+      // Normalize tool name (remove TOOL_CALL prefix if present)
+      const normalizedToolName = toolName.replace(/^TOOL_CALL\s+/, '').trim();
+      const tool = tools[normalizedToolName];
+      if (!tool) throw new Error(`Tool ${normalizedToolName} not found`);
       let params = parseParams(paramsRaw);
       if (tool.definition.function.parameters.properties.externalId && !params.externalId) {
         params.externalId = externalId;
@@ -77,7 +88,7 @@ export class AssistantController {
       }
       const toolResult = await tool.handler(params);
       messages.push({ role: 'assistant', content });
-      messages.push({ role: 'function', name: toolName, content: toolResult });
+      messages.push({ role: 'function', name: normalizedToolName, content: toolResult });
       response = await openai.chat.completions.create({
         model,
         messages,

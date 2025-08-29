@@ -22,12 +22,14 @@
     "@supabase/supabase-js": "^2.50.4",
     "@types/mssql": "^9.1.7",
     "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
     "dotenv": "^16.5.0",
     "fastify": "^5.3.3",
     "mssql": "^11.0.1",
     "openai": "^4.103.0",
     "sqlite3": "^5.1.7",
-    "twilio": "^5.6.1"
+    "twilio": "^5.6.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/sqlite3": "^3.1.11",

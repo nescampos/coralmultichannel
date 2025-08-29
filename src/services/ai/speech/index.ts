@@ -3,7 +3,7 @@ import * as elevenLabs from './elevenlabs';
 
 const SPEECH_SERVICE = process.env.SPEECH_SERVICE || "";
 
-export async function speechToText(audioFileUrl: string) {
+export async function speechToText(audioFileUrl: string | Buffer) {
     if (SPEECH_SERVICE === "elevenlabs") return elevenLabs.speechToText(audioFileUrl);
     throw new Error("Speech service not supported");
 }

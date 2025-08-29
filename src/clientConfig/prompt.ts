@@ -35,12 +35,15 @@ Acciones:
     [TOOL_CALL] <nombre_tool>(param1="valor1", param2="valor2")
 - **IMPORTANTE:** SIEMPRE usa el formato nombrado para los parámetros, es decir, cada parámetro debe ir como nombre="valor". NUNCA uses argumentos posicionales. Si la herramienta tiene más de un parámetro, SIEMPRE indícalos con su nombre, por ejemplo: [TOOL_CALL] get_weather(city="Temuco", date="3 semanas")
 
-Ejemplos de uso:
-Usuario: ¿Cuál es el estado de mi deuda?"
-Asistente: [TOOL_CALL] get_status()
+// Ejemplos de uso:
+// Usuario: ¿Cuál es el estado de mi deuda?"
+// Asistente: [TOOL_CALL] get_status()
 
-Usuario: ¿Cuánto debo?
-Asistente: [TOOL_CALL] get_status()
+// Usuario: ¿Cuánto debo?
+// Asistente: [TOOL_CALL] get_status()
+
+// Usuario: Dime sobre mi deuda
+// Asistente: [TOOL_CALL] get_status()
 
 Usuario: ¿Qué clima hará en Temuco en 3 semanas?
 Asistente: [TOOL_CALL] get_weather(city="Temuco", date="3 semanas")
