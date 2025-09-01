@@ -79,6 +79,7 @@
             color: #333;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/webrtcvad_js@1.0.0/webrtc_vad.min.js"></script>
 </head>
 <body>
     <div class="call-container">
@@ -179,42 +180,159 @@
             }
         };
 
+        let audioContext;
+        let audioProcessor;
+        let vad;
+        let silenceTimer;
+        const SILENCE_THRESHOLD = 0.02; // Ajusta según sea necesario
+        const SILENCE_DELAY_MS = 2000; // 2 segundos de silencio para considerar que terminó de hablar
+
         function startRecording(stream) {
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm;codecs=opus'
-            });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
             
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN && isRecording) {
-                    // Convertir Blob a base64
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const base64Data = reader.result.split(',')[1]; // Remover el prefijo data:audio/webm;base64,
-                        
-                        ws.send(JSON.stringify({
-                            type: 'audio',
-                            sessionId: sessionId,
-                            userId: 'user-' + Date.now(),
-                            audioData: base64Data
-                        }));
-                    };
-                    reader.readAsDataURL(event.data);
+            // Configurar el procesador de audio
+            audioProcessor = audioContext.createScriptProcessor(1024, 1, 1);
+            
+            let audioChunks = [];
+            let isSpeaking = false;
+            
+            audioProcessor.onaudioprocess = (e) => {
+                const inputData = e.inputBuffer.getChannelData(0);
+                const volume = getVolume(inputData);
+                
+                if (volume > SILENCE_THRESHOLD) {
+                    if (!isSpeaking) {
+                        isSpeaking = true;
+                        clearTimeout(silenceTimer);
+                        console.log("Hablando detectado");
+                    }
+                    // Agregar el chunk actual al buffer
+                    audioChunks.push(new Float32Array(inputData));
+                } else if (isSpeaking) {
+                    if (!silenceTimer) {
+                        silenceTimer = setTimeout(() => {
+                            console.log("Fin de habla detectado");
+                            isSpeaking = false;
+                            processAndSendAudio(audioChunks);
+                            audioChunks = [];
+                            silenceTimer = null;
+                        }, SILENCE_DELAY_MS);
+                    }
                 }
             };
-
-            mediaRecorder.start(3000); // Enviar cada 3 segundos
+            
+            source.connect(audioProcessor);
+            audioProcessor.connect(audioContext.destination);
             isRecording = true;
         }
 
-        function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                isRecording = false;
+        function getVolume(buffer) {
+            let sum = 0;
+            for (let i = 0; i < buffer.length; i++) {
+                sum += buffer[i] * buffer[i];
             }
+            return Math.sqrt(sum / buffer.length);
+        }
+
+        async function processAndSendAudio(chunks) {
+            if (!chunks.length) return;
+            
+            // Concatenar todos los chunks
+            const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+            const merged = new Float32Array(length);
+            let offset = 0;
+            
+            for (const chunk of chunks) {
+                merged.set(chunk, offset);
+                offset += chunk.length;
+            }
+            
+            // Convertir a formato WAV
+            const wavBuffer = toWav(merged);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            
+            // Enviar el audio
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result.split(',')[1];
+                    ws.send(JSON.stringify({
+                        type: 'audio',
+                        sessionId: sessionId,
+                        userId: 'user-' + Date.now(),
+                        audioData: base64Data
+                    }));
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+
+        // Función auxiliar para convertir Float32Array a WAV
+        function toWav(buffer) {
+            const numChannels = 1;
+            const sampleRate = 48000; // Ajusta según tu configuración
+            const format = 3; // Float32
+            const bitDepth = 32;
+            
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = buffer.length * bytesPerSample;
+            
+            const buffer2 = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer2);
+            
+            // Escribir encabezado WAV
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Tamaño del encabezado
+            view.setUint16(20, format, true); // Formato
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // Escribir datos de audio
+            const floatView = new Float32Array(buffer);
+            const writeInt = (offset, value) => {
+                view.setFloat32(offset, value, true);
+            };
+            
+            for (let i = 0; i < floatView.length; i++) {
+                writeInt(44 + (i * 4), floatView[i]);
+            }
+            
+            return buffer2;
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function stopRecording() {
+            if (audioProcessor) {
+                audioProcessor.disconnect();
+                audioProcessor = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            clearTimeout(silenceTimer);
+            isRecording = false;
         }
 
         function playAudio(audioUrl) {
             const audio = new Audio(audioUrl);
+            console.log(audioUrl);
             audio.play().catch(error => {
                 console.error('Error playing audio:', error);
             });
