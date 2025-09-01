@@ -140,7 +140,7 @@
                     ws.send(JSON.stringify({
                         type: 'call_start',
                         sessionId: sessionId,
-                        userId: 'user-' + Date.now()
+                        userId: 'user123'
                     }));
                     
                     updateStatus('Conectado - Habla ahora', true);
@@ -260,7 +260,7 @@
                     ws.send(JSON.stringify({
                         type: 'audio',
                         sessionId: sessionId,
-                        userId: 'user-' + Date.now(),
+                        userId: 'user123',
                         audioData: base64Data
                     }));
                 };
@@ -343,7 +343,7 @@
                 ws.send(JSON.stringify({
                     type: 'call_end',
                     sessionId: sessionId,
-                    userId: 'user-' + Date.now()
+                    userId: 'user123'
                 }));
                 ws.close();
             }

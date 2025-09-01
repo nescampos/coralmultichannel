@@ -32,7 +32,7 @@ const senders: Record<string, (to: string, text: string, reply?: any, isAudio?: 
   twilio: twilio.sendTwilioMessage,
   waba: (to, text) => waba.sendWabaMessage(to, text),
   webrtc: (to, text, reply, isAudio) => webrtc.sendWebRTCResponse(to, text, reply?.sessionId || ''),
-  telegram: (to, text) => telegram.sendTelegramMessage(to, text),
+  telegram: (to, text, reply, isAudio) => telegram.sendTelegramMessage(to, text, isAudio),
 };
 
 export async function sendMessage(provider: string, to: string, text: string, reply?: any, isAudio?: boolean) {
