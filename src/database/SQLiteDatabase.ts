@@ -110,19 +110,30 @@ export class SQLiteDatabase implements IDatabase {
      * Obtiene los mensajes más recientes para una identidad de usuario por proveedor.
      */
     async getRecentMessagesByProvider(provider: string, externalId: string, limit: number = 10): Promise<Array<{message: string, role: string, timestamp: string}>> {
-        const row = await this.get(
-            'SELECT id FROM user_provider_identity WHERE provider = ? AND external_id = ?',
+        // Primero obtenemos el global_user_id
+        const identityRow = await this.get(
+            'SELECT global_user_id FROM user_provider_identity WHERE provider = ? AND external_id = ?',
             [provider, externalId]
         );
-        if (!row) return [];
-        return await this.all(
-            `SELECT message, role, timestamp 
-             FROM chat_history 
-             WHERE user_provider_identity_id = ? 
-             ORDER BY timestamp DESC 
+        if (!identityRow) return [];
+        const globalUserId = identityRow.global_user_id;
+
+        // Luego obtenemos los mensajes del historial usando el global_user_id
+        const messages = await this.all(
+            `SELECT ch.message, ch.role, ch.timestamp
+             FROM chat_history ch
+             INNER JOIN user_provider_identity upi ON ch.user_provider_identity_id = upi.id
+             WHERE upi.global_user_id = ?
+             ORDER BY ch.timestamp DESC
              LIMIT ?`,
-            [row.id, limit]
+            [globalUserId, limit]
         );
+
+        return messages.map(row => ({
+            message: row.message,
+            role: row.role,
+            timestamp: new Date(row.timestamp).toISOString()
+        }));
     }
 
     /**

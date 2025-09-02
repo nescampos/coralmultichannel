@@ -110,17 +110,33 @@ export class SQLServerDatabase implements IDatabase {
     }
 
     async getRecentMessagesByProvider(provider: string, externalId: string, limit: number = 10): Promise<Array<{message: string, role: string, timestamp: string}>> {
-        let result = await this.pool.request()
+        // Primero obtenemos el global_user_id
+        const identityResult = await this.pool.request()
             .input('provider', sql.NVarChar, provider)
             .input('externalId', sql.NVarChar, externalId)
-            .query('SELECT id FROM user_provider_identity WHERE provider = @provider AND external_id = @externalId');
-        if (result.recordset.length === 0) return [];
-        const identityId = result.recordset[0].id;
-        let messages = await this.pool.request()
-            .input('identityId', sql.Int, identityId)
+            .query('SELECT global_user_id FROM user_provider_identity WHERE provider = @provider AND external_id = @externalId');
+            
+        if (identityResult.recordset.length === 0) return [];
+        const globalUserId = identityResult.recordset[0].global_user_id;
+
+        // Luego obtenemos los mensajes del historial usando el global_user_id
+        const result = await this.pool.request()
+            .input('globalUserId', sql.Int, globalUserId)
             .input('limit', sql.Int, limit)
-            .query(`SELECT message, role, timestamp FROM chat_history WHERE user_provider_identity_id = @identityId ORDER BY timestamp DESC OFFSET 0 ROWS FETCH NEXT @limit ROWS ONLY`);
-        return messages.recordset;
+            .query(`
+                SELECT ch.message, ch.role, ch.timestamp
+                FROM chat_history ch
+                INNER JOIN user_provider_identity upi ON ch.user_provider_identity_id = upi.id
+                WHERE upi.global_user_id = @globalUserId
+                ORDER BY ch.timestamp DESC
+                OFFSET 0 ROWS FETCH NEXT @limit ROWS ONLY
+            `);
+
+        return result.recordset.map(row => ({
+            message: row.message,
+            role: row.role,
+            timestamp: row.timestamp.toISOString()
+        }));
     }
 
     /**

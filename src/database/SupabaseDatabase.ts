@@ -53,20 +53,26 @@ export class SupabaseDatabase implements IDatabase {
   async getRecentMessagesByProvider(provider: string, externalId: string, limit: number = 10): Promise<Array<{message: string, role: string, timestamp: string}>> {
     const { data: identity, error: identityError } = await this.client
       .from('user_provider_identity')
-      .select('id')
+      .select('global_user_id')
       .eq('provider', provider)
       .eq('external_id', externalId)
       .maybeSingle();
     if (identityError) throw identityError;
-    if (!identity) return [];
+    if (!identity || !identity.global_user_id) return [];
     const { data, error } = await this.client
       .from('chat_history')
-      .select('message, role, timestamp')
-      .eq('user_provider_identity_id', identity.id)
+      .select('message, role, timestamp, user_provider_identity:user_provider_identity_id (provider)')
+      .eq('user_provider_identity.global_user_id', identity.global_user_id)
       .order('timestamp', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      message: item.message,
+      role: item.role,
+      timestamp: item.timestamp
+      // Incluimos el provider en la respuesta por si es necesario
+      //provider: (item as any).user_provider_identity?.provider
+    }));
   }
 
 
