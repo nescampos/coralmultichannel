@@ -12,6 +12,7 @@ Una API que proporciona un asistente virtual inteligente para consultas utilizan
 - Base de datos SQL Server o Supabase para producción
 - Sistema de tools dinámico y extensible (ejecutadas en backend)
 - Configuración flexible de modelo y endpoint (baseURL)
+- Integración con Model Context Protocol (MCP) para conectar con servidores remotos
 
 ## 📋 Requisitos Previos
 
@@ -106,6 +107,7 @@ src/
 ├── database/       # Configuración y modelos de la base de datos
 ├── schemas/        # Esquemas de validación
 ├── services/       # Lógica común de procesamiento de mensajes
+│   └── mcp/        # Servicios relacionados con Model Context Protocol
 ├── utils/          # Utilidades
 ├── config/         # Configuración del servidor
 ```
@@ -241,6 +243,38 @@ Body=mensaje_del_usuario&From=numero_telefono
 - **WABA:** Mensaje enviado vía API de Meta
 - **Otros canales:** Adaptable
 
+## 🔌 Integración con Model Context Protocol (MCP)
+
+Esta API ahora incluye integración con Model Context Protocol (MCP), lo que permite conectar el asistente con servidores remotos que exponen recursos y herramientas. Esta integración amplía las capacidades del asistente sin necesidad de implementar cada herramienta localmente.
+
+### Configuración de servidores MCP
+
+Para conectar con servidores MCP remotos, debes configurarlos en el archivo `src/config/mcpServers.ts`:
+
+```typescript
+export const mcpServers: MCPServerConfig[] = [
+  {
+    url: "http://localhost:3001/mcp",
+    name: "example-server",
+    version: "1.0.0"
+  },
+  // Agrega más servidores según sea necesario
+];
+```
+
+### Funcionamiento
+
+1. Al iniciar el servidor, se conectarán automáticamente los servidores MCP configurados.
+2. Las herramientas disponibles en estos servidores se registrarán y estarán disponibles para el asistente.
+3. Cuando el modelo necesite usar una herramienta, verificará tanto las herramientas locales como las disponibles en los servidores MCP.
+4. Los resultados de las herramientas se manejan de la misma manera que las herramientas locales.
+
+### Ventajas
+
+- **Extensibilidad**: Agrega nuevas funcionalidades conectándote a servidores MCP sin modificar el código local.
+- **Modularidad**: Cada servidor MCP puede proporcionar un conjunto específico de herramientas y recursos.
+- **Desacoplamiento**: Las herramientas se ejecutan en sus servidores respectivos, reduciendo la carga en el servidor principal.
+
 ## 🔄 Extensibilidad
 
 ### Agregar Nuevos Canales
@@ -299,6 +333,7 @@ An API that provides a smart virtual assistant for queries using the OpenAI API 
 - SQL Server or Supabase database for production
 - Dynamic and extensible tools system (executed in backend)
 - Flexible model and endpoint (baseURL) configuration
+- Integration with Model Context Protocol (MCP) to connect to remote servers
 
 ## 📋 Prerequisites
 
@@ -393,6 +428,7 @@ src/
 ├── database/       # Database config and models
 ├── schemas/        # Validation schemas
 ├── services/       # Common message processing logic
+│   └── mcp/        # Services related to Model Context Protocol
 ├── utils/          # Utilities
 ├── config/         # Server configuration
 ```
@@ -525,6 +561,38 @@ Body=user_message&From=phone_number
 - **Twilio:** XML (TwiML)
 - **WABA:** Message sent via Meta API
 - **Other channels:** Adaptable
+
+## 🔌 Model Context Protocol (MCP) Integration
+
+This API now includes integration with Model Context Protocol (MCP), which allows the assistant to connect to remote servers that expose resources and tools. This integration expands the assistant's capabilities without needing to implement each tool locally.
+
+### MCP Server Configuration
+
+To connect to remote MCP servers, you need to configure them in the file `src/config/mcpServers.ts`:
+
+```typescript
+export const mcpServers: MCPServerConfig[] = [
+  {
+    url: "http://localhost:3001/mcp",
+    name: "example-server",
+    version: "1.0.0"
+  },
+  // Add more servers as needed
+];
+```
+
+### How It Works
+
+1. When the server starts, it will automatically connect to the configured MCP servers.
+2. Tools available on these servers will be registered and made available to the assistant.
+3. When the model needs to use a tool, it will check both local tools and those available on MCP servers.
+4. Tool results are handled in the same way as local tools.
+
+### Benefits
+
+- **Extensibility**: Add new functionalities by connecting to MCP servers without modifying local code.
+- **Modularity**: Each MCP server can provide a specific set of tools and resources.
+- **Decoupling**: Tools run on their respective servers, reducing the load on the main server.
 
 ## 🔄 Extensibility
 
