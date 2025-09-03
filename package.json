@@ -7,7 +7,8 @@
     "start-api": "ts-node src/index.ts",
     "compile": "tsc",
     "setup-db": "ts-node src/scripts/setupDatabase.ts",
-    "setup-client-db": "ts-node src/clientConfig/scripts/setupClientDatabase.ts"
+    "setup-client-db": "ts-node src/clientConfig/scripts/setupClientDatabase.ts",
+    "mcp-servers": "ts-node src/scripts/manageMCPServers.ts"
   },
   "author": "",
   "license": "MIT",

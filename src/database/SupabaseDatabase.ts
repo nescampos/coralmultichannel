@@ -76,6 +76,58 @@ export class SupabaseDatabase implements IDatabase {
   }
 
 
+  /**
+   * Obtiene todos los servidores MCP configurados.
+   */
+  async getMCPServers(): Promise<Array<{ id: number, name: string, url: string, version: string }>> {
+    const { data, error } = await this.client
+      .from('mcp_servers')
+      .select('id, name, url, version')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      url: item.url,
+      version: item.version
+    }));
+  }
+
+  /**
+   * Agrega un nuevo servidor MCP.
+   */
+  async addMCPServer(name: string, url: string, version: string): Promise<number> {
+    const { data, error } = await this.client
+      .from('mcp_servers')
+      .insert({ name, url, version })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data.id;
+  }
+
+  /**
+   * Actualiza un servidor MCP existente.
+   */
+  async updateMCPServer(id: number, name: string, url: string, version: string): Promise<void> {
+    const { error } = await this.client
+      .from('mcp_servers')
+      .update({ name, url, version })
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  /**
+   * Elimina un servidor MCP.
+   */
+  async deleteMCPServer(id: number): Promise<void> {
+    const { error } = await this.client
+      .from('mcp_servers')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  }
+
   async close(): Promise<void> {
     // No persistent connection to close in Supabase
   }

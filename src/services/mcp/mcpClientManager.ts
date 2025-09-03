@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { ToolConfig } from "../../utils/toolConfig";
+import { MCPServerService } from "./mcpServerService";
 
 interface MCPClientConfig 
 {
@@ -29,6 +30,13 @@ export class MCPClientManager
     
     // Connect to all configured MCP servers
     async connectAll(): Promise<void> {
+        // If no server configs were provided, load them from the database
+        if (this.serverConfigs.length === 0) {
+            this.serverConfigs = await MCPServerService.getServerConfigs();
+        }
+
+        console.log(`Connecting to ${this.serverConfigs.length} MCP servers...`);
+        
         for (const config of this.serverConfigs) {
             try {
                 await this.addClient(config);
@@ -186,8 +194,16 @@ export class MCPClientManager
         // Clear existing connections and tools
         await this.disconnectAll();
         
+        // Reload server configurations from database
+        this.serverConfigs = await MCPServerService.getServerConfigs();
+        
         // Reconnect to all servers
         await this.connectAll();
+    }
+    
+    // Refresh server configurations from database
+    async refreshServerConfigs(): Promise<void> {
+        this.serverConfigs = await MCPServerService.getServerConfigs();
     }
     
     async disconnectAll(): Promise<void> {

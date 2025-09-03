@@ -69,6 +69,15 @@ export class SQLServerDatabase implements IDatabase {
                 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_chat_history_timestamp')
                 CREATE INDEX idx_chat_history_timestamp ON chat_history(timestamp)
             `);
+            await transaction.request().query(`
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'mcp_servers')
+                CREATE TABLE mcp_servers (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(250) NOT NULL UNIQUE,
+                    url NVARCHAR(500) NOT NULL,
+                    version NVARCHAR(50) NOT NULL
+                )
+            `);
             await transaction.commit();
         } catch (error) {
             await transaction.rollback();
@@ -140,65 +149,61 @@ export class SQLServerDatabase implements IDatabase {
     }
 
     /**
-     * @inheritdoc
-     * Utiliza parámetros SQL para prevenir inyección SQL y retorna la información
-     * de deuda de un usuario específico.
+     * Obtiene todos los servidores MCP configurados.
      */
-    async getUserDebt(phoneNumber: string): Promise<{
-        phoneNumber: string;
-        name: string | null;
-        debtAmount: number;
-        dueDate: Date;
-        createdAt: Date;
-    } | null> {
-        const result = await this.pool.request()
-            .input('phoneNumber', sql.NVarChar, phoneNumber)
-            .query(`
-                SELECT phone_number, name, debt_amount, due_date, created_at
-                FROM user_debt
-                WHERE phone_number = @phoneNumber
-            `);
-
-        if (result.recordset.length === 0) return null;
-
-        const row = result.recordset[0];
-        return {
-            phoneNumber: row.phone_number,
+    async getMCPServers(): Promise<Array<{ id: number, name: string, url: string, version: string }>> {
+        const result = await this.pool.request().query(`
+            SELECT id, name, url, version 
+            FROM mcp_servers 
+            ORDER BY name
+        `);
+        return result.recordset.map(row => ({
+            id: row.id,
             name: row.name,
-            debtAmount: row.debt_amount,
-            dueDate: new Date(row.due_date),
-            createdAt: new Date(row.created_at)
-        };
+            url: row.url,
+            version: row.version
+        }));
     }
 
     /**
-     * @inheritdoc
-     * Utiliza parámetros SQL para prevenir inyección SQL y retorna todas las deudas
-     * vencidas hasta una fecha específica, ordenadas por fecha de vencimiento.
+     * Agrega un nuevo servidor MCP.
      */
-    async getOverdueDebts(date: Date): Promise<Array<{
-        phoneNumber: string;
-        name: string | null;
-        debtAmount: number;
-        dueDate: Date;
-        createdAt: Date;
-    }>> {
+    async addMCPServer(name: string, url: string, version: string): Promise<number> {
         const result = await this.pool.request()
-            .input('date', sql.Date, date)
+            .input('name', sql.NVarChar, name)
+            .input('url', sql.NVarChar, url)
+            .input('version', sql.NVarChar, version)
             .query(`
-                SELECT phone_number, name, debt_amount, due_date, created_at
-                FROM user_debt
-                WHERE due_date <= @date
-                ORDER BY due_date ASC
+                INSERT INTO mcp_servers (name, url, version) 
+                OUTPUT INSERTED.id 
+                VALUES (@name, @url, @version)
             `);
+        return result.recordset[0].id;
+    }
 
-        return result.recordset.map(row => ({
-            phoneNumber: row.phone_number,
-            name: row.name,
-            debtAmount: row.debt_amount,
-            dueDate: new Date(row.due_date),
-            createdAt: new Date(row.created_at)
-        }));
+    /**
+     * Actualiza un servidor MCP existente.
+     */
+    async updateMCPServer(id: number, name: string, url: string, version: string): Promise<void> {
+        await this.pool.request()
+            .input('id', sql.Int, id)
+            .input('name', sql.NVarChar, name)
+            .input('url', sql.NVarChar, url)
+            .input('version', sql.NVarChar, version)
+            .query(`
+                UPDATE mcp_servers 
+                SET name = @name, url = @url, version = @version 
+                WHERE id = @id
+            `);
+    }
+
+    /**
+     * Elimina un servidor MCP.
+     */
+    async deleteMCPServer(id: number): Promise<void> {
+        await this.pool.request()
+            .input('id', sql.Int, id)
+            .query('DELETE FROM mcp_servers WHERE id = @id');
     }
 
     /**

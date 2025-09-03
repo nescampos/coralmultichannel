@@ -6,7 +6,6 @@ import { ServerLifecycle } from './utils/serverLifecycle';
 import { AssistantController } from './controllers/assistantController';
 import path from 'path';
 import { WebRTCServer } from './services/webrtc/websocketServer';
-import { mcpClientManager } from './controllers/assistantController';
 
 async function startServer() {
     // Initialize Fastify with configuration
@@ -28,14 +27,6 @@ async function startServer() {
 
     // Register shutdown handlers
     ServerLifecycle.registerShutdownHandlers(fastify);
-    
-    // Add MCP client manager to shutdown handlers
-    // const originalShutdownHandler = ServerLifecycle.shutdownHandler;
-    // ServerLifecycle.shutdownHandler = async (signal: string) => {
-    //     console.log(`Received ${signal}. Shutting down MCP connections...`);
-    //     await mcpClientManager.disconnectAll();
-    //     await originalShutdownHandler(signal);
-    // };
 
     try {
         await fastify.listen(serverListenConfig);

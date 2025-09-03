@@ -249,18 +249,28 @@ Esta API ahora incluye integración con Model Context Protocol (MCP), lo que per
 
 ### Configuración de servidores MCP
 
-Para conectar con servidores MCP remotos, debes configurarlos en el archivo `src/config/mcpServers.ts`:
+En lugar de configurar los servidores MCP en un archivo estático, ahora se gestionan dinámicamente a través de la base de datos. Puedes administrar los servidores MCP utilizando el script `npm run mcp-servers`:
 
-```typescript
-export const mcpServers: MCPServerConfig[] = [
-  {
-    url: "http://localhost:3001/mcp",
-    name: "example-server",
-    version: "1.0.0"
-  },
-  // Agrega más servidores según sea necesario
-];
+```bash
+# Listar todos los servidores MCP
+npm run mcp-servers list
+
+# Agregar un nuevo servidor MCP
+npm run mcp-servers add nombre-servidor http://url-del-servidor/mcp version
+
+# Actualizar un servidor MCP existente
+npm run mcp-servers update id nombre-servidor http://url-del-servidor/mcp version
+
+# Eliminar un servidor MCP
+npm run mcp-servers delete id
 ```
+
+Ejemplo:
+```bash
+npm run mcp-servers add gitmcp https://gitmcp.io/docs 1.0.0
+```
+
+También puedes administrar los servidores MCP directamente en la base de datos. Al inicializar la base de datos con `npm run setup-db`, se agregará automáticamente un servidor de ejemplo si no existen servidores configurados.
 
 ### Funcionamiento
 
@@ -568,18 +578,28 @@ This API now includes integration with Model Context Protocol (MCP), which allow
 
 ### MCP Server Configuration
 
-To connect to remote MCP servers, you need to configure them in the file `src/config/mcpServers.ts`:
+Instead of configuring MCP servers in a static file, they are now managed dynamically through the database. You can manage MCP servers using the `npm run mcp-servers` script:
 
-```typescript
-export const mcpServers: MCPServerConfig[] = [
-  {
-    url: "http://localhost:3001/mcp",
-    name: "example-server",
-    version: "1.0.0"
-  },
-  // Add more servers as needed
-];
+```bash
+# List all MCP servers
+npm run mcp-servers list
+
+# Add a new MCP server
+npm run mcp-servers add server-name http://server-url/mcp version
+
+# Update an existing MCP server
+npm run mcp-servers update id server-name http://server-url/mcp version
+
+# Delete an MCP server
+npm run mcp-servers delete id
 ```
+
+Example:
+```bash
+npm run mcp-servers add gitmcp https://gitmcp.io/docs 1.0.0
+```
+
+You can also manage MCP servers directly in the database. When initializing the database with `npm run setup-db`, an example server will be automatically added if no servers are configured.
 
 ### How It Works
 

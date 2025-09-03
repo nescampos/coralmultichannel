@@ -60,6 +60,14 @@ export class SQLiteDatabase implements IDatabase {
                     FOREIGN KEY (user_provider_identity_id) REFERENCES user_provider_identity(id)
                 )
             `);
+            await this.run(`
+                CREATE TABLE IF NOT EXISTS mcp_servers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    url TEXT NOT NULL,
+                    version TEXT NOT NULL
+                )
+            `);
             await this.run('CREATE INDEX IF NOT EXISTS idx_chat_history_user_provider_identity_id ON chat_history(user_provider_identity_id)');
             await this.run('CREATE INDEX IF NOT EXISTS idx_chat_history_timestamp ON chat_history(timestamp)');
             await this.run('COMMIT');
@@ -134,6 +142,48 @@ export class SQLiteDatabase implements IDatabase {
             role: row.role,
             timestamp: new Date(row.timestamp).toISOString()
         }));
+    }
+
+    /**
+     * Obtiene todos los servidores MCP configurados.
+     */
+    async getMCPServers(): Promise<Array<{ id: number, name: string, url: string, version: string }>> {
+        const rows = await this.all('SELECT id, name, url, version FROM mcp_servers ORDER BY name');
+        return rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            url: row.url,
+            version: row.version
+        }));
+    }
+
+    /**
+     * Agrega un nuevo servidor MCP.
+     */
+    async addMCPServer(name: string, url: string, version: string): Promise<number> {
+        const result = await this.run(
+            'INSERT INTO mcp_servers (name, url, version) VALUES (?, ?, ?)',
+            [name, url, version]
+        );
+        const idRow = await this.get('SELECT last_insert_rowid() as id');
+        return idRow.id;
+    }
+
+    /**
+     * Actualiza un servidor MCP existente.
+     */
+    async updateMCPServer(id: number, name: string, url: string, version: string): Promise<void> {
+        await this.run(
+            'UPDATE mcp_servers SET name = ?, url = ?, version = ? WHERE id = ?',
+            [name, url, version, id]
+        );
+    }
+
+    /**
+     * Elimina un servidor MCP.
+     */
+    async deleteMCPServer(id: number): Promise<void> {
+        await this.run('DELETE FROM mcp_servers WHERE id = ?', [id]);
     }
 
     /**

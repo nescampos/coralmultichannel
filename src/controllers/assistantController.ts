@@ -9,7 +9,6 @@ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completio
 import { aiConfig } from '../config/ai';
 import { CHANNEL_META_MAP } from "../channels";
 import { MCPClientManager } from '../services/mcp/mcpClientManager';
-import { mcpServers } from '../config/mcpServers';
 
 function sendError(reply: FastifyReply, error: unknown) {
   reply.status(500).send({ error: (error instanceof Error ? error.message : String(error)) });
@@ -18,8 +17,8 @@ function sendError(reply: FastifyReply, error: unknown) {
 const openai = new OpenAI(aiConfig.openaiConfig);
 const { model, maxTokens, historySize, modelTemperature } = aiConfig;
 
-// Inicializar el gestor de clientes MCP with server configurations
-export const mcpClientManager = new MCPClientManager(mcpServers);
+// Inicializar el gestor de clientes MCP without server configurations (will load from database)
+export const mcpClientManager = new MCPClientManager();
 
 // Initialize MCP connections once at startup
 (async () => {

@@ -25,6 +25,26 @@ export interface IDatabase {
     getRecentMessagesByProvider(provider: string, externalId: string, limit?: number): Promise<Array<{message: string, role: string, timestamp: string}>>;
 
     /**
+     * Obtiene todos los servidores MCP configurados.
+     */
+    getMCPServers(): Promise<Array<{ id: number, name: string, url: string, version: string }>>;
+
+    /**
+     * Agrega un nuevo servidor MCP.
+     */
+    addMCPServer(name: string, url: string, version: string): Promise<number>;
+
+    /**
+     * Actualiza un servidor MCP existente.
+     */
+    updateMCPServer(id: number, name: string, url: string, version: string): Promise<void>;
+
+    /**
+     * Elimina un servidor MCP.
+     */
+    deleteMCPServer(id: number): Promise<void>;
+
+    /**
      * Cierra la conexión con la base de datos y libera los recursos.
      */
     close(): Promise<void>;
