@@ -20,10 +20,35 @@ export class MCPClientManager
 {
     private clients: Map<string, Client> = new Map();
     private tools: Map<string, ToolConfig> = new Map();
+    private serverConfigs: MCPClientConfig[] = [];
+    
+    // Initialize with server configurations
+    constructor(serverConfigs: MCPClientConfig[] = []) {
+        this.serverConfigs = serverConfigs;
+    }
+    
+    // Connect to all configured MCP servers
+    async connectAll(): Promise<void> {
+        for (const config of this.serverConfigs) {
+            try {
+                await this.addClient(config);
+                console.log(`Connected to MCP server: ${config.name}`);
+            } catch (error) {
+                console.error(`Error connecting to MCP server ${config.name}:`, error);
+            }
+        }
+    }
+    
     async addClient(config: MCPClientConfig): Promise<void> 
     {
         try 
         {
+            // Check if already connected
+            if (this.clients.has(config.name)) {
+                console.log(`Already connected to MCP server: ${config.name}`);
+                return;
+            }
+            
             const transport = new StreamableHTTPClientTransport(new URL(config.url));
             const client = new Client({name: config.name,version: config.version,});
             
@@ -67,6 +92,11 @@ export class MCPClientManager
                     },
                     handler: async (args: any) => {
                         try {
+                            // Check if client is still connected
+                            if (!this.clients.has(serverName)) {
+                                throw new Error(`Client ${serverName} is not connected`);
+                            }
+                            
                             const result = await client.callTool({
                                 name: tool.name,
                                 arguments: args
@@ -113,6 +143,51 @@ export class MCPClientManager
     
     getTools(): Map<string, ToolConfig> {
         return this.tools;
+    }
+    
+    // Check if a client is still connected
+    isClientConnected(serverName: string): boolean {
+        return this.clients.has(serverName);
+    }
+    
+    // Reconnect to a specific server
+    async reconnectClient(serverName: string): Promise<void> {
+        const config = this.serverConfigs.find(c => c.name === serverName);
+        if (!config) {
+            throw new Error(`Server configuration not found for ${serverName}`);
+        }
+        
+        // Remove existing client if present
+        if (this.clients.has(serverName)) {
+            const existingClient = this.clients.get(serverName);
+            if (existingClient) {
+                try {
+                    await existingClient.close();
+                } catch (error) {
+                    console.error(`Error closing existing connection to ${serverName}:`, error);
+                }
+            }
+            this.clients.delete(serverName);
+        }
+        
+        // Remove tools associated with this server
+        for (const [toolName, _] of this.tools) {
+            if (toolName.startsWith(`${serverName}_`)) {
+                this.tools.delete(toolName);
+            }
+        }
+        
+        // Reconnect
+        await this.addClient(config);
+    }
+    
+    // Reconnect all clients
+    async reconnectAll(): Promise<void> {
+        // Clear existing connections and tools
+        await this.disconnectAll();
+        
+        // Reconnect to all servers
+        await this.connectAll();
     }
     
     async disconnectAll(): Promise<void> {

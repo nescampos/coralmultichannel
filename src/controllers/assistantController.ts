@@ -9,6 +9,7 @@ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completio
 import { aiConfig } from '../config/ai';
 import { CHANNEL_META_MAP } from "../channels";
 import { MCPClientManager } from '../services/mcp/mcpClientManager';
+import { mcpServers } from '../config/mcpServers';
 
 function sendError(reply: FastifyReply, error: unknown) {
   reply.status(500).send({ error: (error instanceof Error ? error.message : String(error)) });
@@ -17,35 +18,48 @@ function sendError(reply: FastifyReply, error: unknown) {
 const openai = new OpenAI(aiConfig.openaiConfig);
 const { model, maxTokens, historySize, modelTemperature } = aiConfig;
 
-// Inicializar el gestor de clientes MCP
-const mcpClientManager = new MCPClientManager();
+// Inicializar el gestor de clientes MCP with server configurations
+export const mcpClientManager = new MCPClientManager(mcpServers);
+
+// Initialize MCP connections once at startup
+(async () => {
+  try {
+    await mcpClientManager.connectAll();
+    console.log('All MCP servers connected successfully');
+  } catch (error) {
+    console.error('Error connecting to MCP servers:', error);
+  }
+})();
 
 // Función para obtener todas las tools (locales y de servidores MCP)
 async function getAllTools() {
   // Obtener tools locales
   const localTools = Object.values(tools).map(tool => tool.definition);
   
-  // Conectar a servidores MCP si no se han conectado aún
-  if (mcpClientManager.getClients().size === 0) {
-    // Cargar la configuración de los servidores MCP desde el archivo de configuración
-    const { mcpServers } = await import('../config/mcpServers');
-    
-    // Conectar a cada servidor MCP configurado
-    for (const serverConfig of mcpServers) {
-      try {
-        await mcpClientManager.addClient(serverConfig);
-        console.log(`Connected to MCP server: ${serverConfig.name}`);
-      } catch (error) {
-        console.error(`Error connecting to MCP server ${serverConfig.name}:`, error);
-      }
-    }
-  }
+  // Verificar la salud de las conexiones y reconectar si es necesario
+  // En un entorno de producción, podrías querer hacer esto de forma más inteligente
+  // Por ejemplo, solo reconectar si ha pasado un cierto tiempo o si se detecta un error
   
-  // Obtener tools de servidores MCP
+  // Obtener tools de servidores MCP (ahora siempre disponibles gracias a la inicialización)
   const mcpTools = Array.from(mcpClientManager.getTools().values()).map(tool => tool.definition);
   
   // Combinar todas las tools
   return [...localTools, ...mcpTools];
+}
+
+// Health check and reconnection function (can be called periodically or when errors occur)
+async function ensureMCPConnections() {
+  try {
+    // In a production environment, you might want to implement a more sophisticated
+    // health check mechanism that doesn't reconnect on every call
+    // For now, we'll just ensure the connections exist
+    if (mcpClientManager.getClients().size === 0) {
+      console.log("Reconnecting to MCP servers...");
+      await mcpClientManager.connectAll();
+    }
+  } catch (error) {
+    console.error("Error ensuring MCP connections:", error);
+  }
 }
 
 // Convertir nuestras tools al formato que espera el SDK de OpenAI
@@ -85,6 +99,9 @@ export class AssistantController {
       ...history,
       { role: 'user', content: text }
     ];
+    
+    // Ensure MCP connections are healthy before proceeding
+    await ensureMCPConnections();
     
     // Obtener todas las tools disponibles (locales y de servidores MCP)
     const allTools = await getAllTools();
@@ -147,6 +164,14 @@ export class AssistantController {
             });
           } catch (error) {
             // En caso de error, reportarlo al modelo
+            console.error(`Error executing tool ${toolName}:`, error);
+            
+            // Try to reconnect to MCP servers if this might be a connection issue
+            if (error instanceof Error && (error.message.includes('connect') || error.message.includes('network'))) {
+              console.log("Attempting to reconnect MCP servers due to connection error...");
+              await ensureMCPConnections();
+            }
+            
             messages.push({
               role: 'tool',
               //name: toolName,
