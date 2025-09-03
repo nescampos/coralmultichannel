@@ -16,16 +16,8 @@ function sendError(reply: FastifyReply, error: unknown) {
 const openai = new OpenAI(aiConfig.openaiConfig);
 const { model, maxTokens, historySize, modelTemperature } = aiConfig;
 
-// Utilidad para parsear los parámetros del string tipo key="value", key2="value2"
-function parseParams(paramsRaw: string): Record<string, any> {
-  const regex = /(\w+)\s*=\s*"(.*?)"/g;
-  const params: Record<string, string> = {};
-  let match;
-  while ((match = regex.exec(paramsRaw)) !== null) {
-    params[match[1]] = match[2];
-  }
-  return params;
-}
+// Convertir nuestras tools al formato que espera el SDK de OpenAI
+const openaiTools = Object.values(tools).map(tool => tool.definition);
 
 export class AssistantController {
   static async handleMessage(request: FastifyRequest, reply: FastifyReply) {
@@ -42,64 +34,106 @@ export class AssistantController {
   }
 
   static async processAIMessage(provider: string, externalId: string, text: string, name?: string): Promise<string> {
-    //console.log('Processing AI message:', { provider, externalId, text }); // Debug log
-    
     // Recuperar historial reciente
     const channelType = CHANNEL_META_MAP[provider]?.CHANNEL_TYPE || provider;
     const recentMessages = await db.getRecentMessagesByProvider(channelType, externalId, historySize);
     const history: ChatCompletionMessageParam[] = recentMessages
       .reverse()
       .map((msg) => ({ role: msg.role as 'user' | 'assistant', content: msg.message }));
+    
     const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: assistantPrompt },
       ...history,
       { role: 'user', content: text }
     ];
     
+    // Llamada inicial al modelo con las tools disponibles
     let response = await openai.chat.completions.create({
       model,
       messages,
       max_tokens: maxTokens,
-      temperature: modelTemperature
+      temperature: modelTemperature,
+      tools: openaiTools, // Pasamos las tools al modelo
+      tool_choice: "auto" // Dejamos que el modelo decida cuándo usar una tool
     });
-    let content = response.choices[0].message?.content ?? '';
     
-    // More flexible regex to match tool calls
-    // This will match formats like:
-    // [TOOL_CALL] get_status()
-    // [get_status()]
-    // get_status()
-    const toolCallMatch = content.match(/(?:$[^$]*$(?:\s*))?(\w+)\(([^)]*)\)/);
-    if (toolCallMatch) {
-      const [, toolName, paramsRaw] = toolCallMatch;
-      // Normalize tool name (remove TOOL_CALL prefix if present)
-      const normalizedToolName = toolName.replace(/^TOOL_CALL\s+/, '').trim();
-      const tool = tools[normalizedToolName];
-      if (!tool) throw new Error(`Tool ${normalizedToolName} not found`);
-      let params = parseParams(paramsRaw);
-      if (tool.definition.function.parameters.properties.externalId && !params.externalId) {
-        params.externalId = externalId;
-      }
-      const required = tool.definition.function.parameters.required || [];
-      for (const req of required) {
-        if (!(req in params)) {
-          throw new Error(`Falta el parámetro requerido: ${req}`);
+    let message = response.choices[0].message;
+    let content = message?.content ?? '';
+    
+    // Verificar si el modelo quiere usar una tool
+    if (message?.tool_calls) {
+      // Agregar el mensaje del assistant al historial
+      messages.push({ role: 'assistant', content: null, tool_calls: message.tool_calls });
+      
+      // Ejecutar cada tool que el modelo quiere usar
+      for (const toolCall of message.tool_calls) {
+        const toolName = toolCall.function.name;
+        const tool = tools[toolName];
+        
+        if (tool) {
+          try {
+            // Parsear los argumentos de la tool
+            const args = JSON.parse(toolCall.function.arguments);
+            
+            // Agregar externalId si es necesario y no está presente
+            if (tool.definition.function.parameters.properties.externalId && !args.externalId) {
+              args.externalId = externalId;
+            }
+            //console.log("External Id", externalId);
+            //console.log("Args", args);
+            // Verificar parámetros requeridos
+            const required = tool.definition.function.parameters.required || [];
+            for (const req of required) {
+              if (!(req in args)) {
+                throw new Error(`Falta el parámetro requerido: ${req}`);
+              }
+            }
+            
+            // Ejecutar la tool
+            const toolResult = await tool.handler(args);
+            
+            // Agregar el resultado de la tool al historial
+            messages.push({
+              role: 'tool',
+              //name: toolName,
+              content: toolResult,
+              tool_call_id: toolCall.id
+            });
+          } catch (error) {
+            // En caso de error, reportarlo al modelo
+            messages.push({
+              role: 'tool',
+              //name: toolName,
+              content: `Error ejecutando la tool: ${error instanceof Error ? error.message : String(error)}`,
+              tool_call_id: toolCall.id
+            });
+          }
+        } else {
+          // Si la tool no existe, reportar el error
+          messages.push({
+            role: 'tool',
+            //name: toolName,
+            content: `Error: La tool "${toolName}" no está disponible`,
+            tool_call_id: toolCall.id
+          });
         }
       }
-      const toolResult = await tool.handler(params);
-      messages.push({ role: 'assistant', content });
-      messages.push({ role: 'function', name: normalizedToolName, content: toolResult });
+      
+      // Obtener la respuesta final del modelo después de ejecutar las tools
       response = await openai.chat.completions.create({
         model,
         messages,
         max_tokens: maxTokens,
         temperature: modelTemperature
       });
+      
       content = response.choices[0].message?.content ?? '';
     }
+    
     // Guardar mensajes en la base de datos
     await db.saveMessageByProvider(channelType, externalId, text, 'user', name);
     await db.saveMessageByProvider(channelType, externalId, content, 'assistant', name);
+    
     return content;
   }
-} 
+}
