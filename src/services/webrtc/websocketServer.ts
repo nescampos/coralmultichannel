@@ -58,6 +58,22 @@ export class WebRTCServer {
               sessionId: sessionId,
               message: 'Llamada iniciada correctamente'
             }));
+
+            const initialMessage = process.env.INITIAL_MESSAGE;
+            if (initialMessage) {
+              // const response = await messageService.processUserMessage(
+              //   'webrtc',
+              //   message.userId,
+              //   initialMessage
+              // );
+
+              const audioResponse = await sendWebRTCResponse(
+                message.userId,
+                initialMessage,
+                sessionId
+              );
+              ws.send(JSON.stringify(audioResponse));
+            }
           } else if (message.type === 'call_end') {
             // Confirmar fin de llamada
             ws.send(JSON.stringify({
