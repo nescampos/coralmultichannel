@@ -1,11 +1,10 @@
 # WhatsApp AI Assistant API
 
-Una API que proporciona un asistente virtual inteligente especializado en información de deudas de crédito automotriz, con integración multi-canal para WhatsApp (Twilio y WhatsApp Business API nativa), Telegram, Email, SIP y WebRTC.
+Una API que proporciona un asistente virtual inteligente especializado, con integración multi-canal para WhatsApp (Twilio y WhatsApp Business API nativa), Telegram, Email, SIP y WebRTC.
 
 ## 🚀 Características
 
 - Asistente virtual inteligente usando OpenAI o servicios compatibles
-- Especializado en consultas de deudas de crédito automotriz
 - Manejo automático de conversaciones por usuario
 - Integración multi-canal:
   - WhatsApp (Twilio y WhatsApp Business API nativa)
