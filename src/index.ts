@@ -6,6 +6,7 @@ import { ServerLifecycle } from './utils/serverLifecycle';
 import { AssistantController } from './controllers/assistantController';
 import path from 'path';
 import { WebRTCServer } from './services/webrtc/websocketServer';
+import { isChannelEnabled } from './config/channels';
 
 async function startServer() {
     // Initialize Fastify with configuration
@@ -22,7 +23,7 @@ async function startServer() {
     // Initialize database
     await ServerLifecycle.initializeDatabase();
 
-    // Register routes
+    // Register routes solo para canales habilitados
     fastify.post('/assistant', { schema: assistantRequestSchema }, AssistantController.handleMessage);
 
     // Register shutdown handlers
@@ -31,12 +32,14 @@ async function startServer() {
     try {
         await fastify.listen(serverListenConfig);
         console.log(`Server running at http://${serverListenConfig.host}:${serverListenConfig.port}/`);
-        // Inicializar servidor WebSocket para WebRTC después de que Fastify esté corriendo
-        if(serverListenConfig.webrtc.port !== undefined){
+        
+        // Inicializar servidor WebSocket para WebRTC solo si está habilitado
+        if(isChannelEnabled('webrtc') && serverListenConfig.webrtc.port !== undefined){
             new WebRTCServer(serverListenConfig.webrtc.port);
             console.log(`WebRTC WebSocket server initialized on port ${serverListenConfig.webrtc.port}`);
+        } else if (!isChannelEnabled('webrtc') && serverListenConfig.webrtc.port !== undefined) {
+            //console.log('WebRTC channel is disabled, WebSocket server not initialized');
         }
-        
     } catch (err) {
         console.log(err);
         fastify.log.error(err);
