@@ -1,92 +1,92 @@
-# WhatsApp AI Assistant API
+# Multi-Channel Assistant API
 
-Una API que proporciona un asistente virtual inteligente especializado, con integración multi-canal para WhatsApp (Twilio y WhatsApp Business API nativa), Telegram, Email, SIP y WebRTC.
+An intelligent virtual assistant API specialized with multi-channel integration for WhatsApp (Twilio and native WhatsApp Business API), Telegram, Email, SIP, and WebRTC.
 
-## 🚀 Características
+## 🚀 Features
 
-- Asistente virtual inteligente usando OpenAI o servicios compatibles
-- Manejo automático de conversaciones por usuario
-- Integración multi-canal:
-  - WhatsApp (Twilio y WhatsApp Business API nativa)
+- Intelligent virtual assistant using OpenAI or compatible services
+- Automatic conversation handling per user
+- Multi-channel integration:
+  - WhatsApp (Twilio and native WhatsApp Business API)
   - Telegram
   - Email (SMTP)
   - SIP (Voice calls)
   - WebRTC (Video/Audio calls)
-- Webhook único y extensible para más canales
-- Base de datos SQLite para desarrollo local
-- Base de datos SQL Server o Supabase para producción
-- Sistema de herramientas (tools) dinámico y extensible
-- Configuración flexible de modelo y endpoint (baseURL)
-- Integración con Model Context Protocol (MCP) para conectar con servidores remotos
-- Soporte para mensajes de voz (STT/TTS) con ElevenLabs y Deepgram
+- Single extensible webhook for more channels
+- SQLite database for local development
+- SQL Server or Supabase database for production
+- Dynamic and extensible tool system
+- Flexible model and endpoint (baseURL) configuration
+- Model Context Protocol (MCP) integration to connect with remote servers
+- Voice message support (STT/TTS) with ElevenLabs and Deepgram
 
-## 📋 Requisitos Previos
+## 📋 Prerequisites
 
-- Node.js (v14 o superior)
-- npm o yarn
-- Una cuenta en OpenAI o servicio compatible con su API
-- Cuentas para los canales que desees habilitar:
-  - Twilio (para WhatsApp/SMS)
+- Node.js (v14 or higher)
+- npm or yarn
+- An account with OpenAI or a compatible API service
+- Accounts for the channels you want to enable:
+  - Twilio (for WhatsApp/SMS)
   - WhatsApp Business API (Meta)
-  - Telegram Bot Token (para Telegram)
-  - Configuración SMTP (para Email)
-  - Configuración SIP (para llamadas de voz)
-- SQL Server o Supabase (solo para producción)
-- ElevenLabs o Deepgram (para mensajes de voz, opcional)
+  - Telegram Bot Token (for Telegram)
+  - SMTP configuration (for Email)
+  - SIP configuration (for voice calls)
+- SQL Server or Supabase (production only)
+- ElevenLabs or Deepgram (for voice messages, optional)
 
-## 🛠️ Instalación
+## 🛠️ Installation
 
-1. Clona el repositorio:
+1. Clone the repository:
 ```bash
-git clone [url-del-repositorio]
+git clone [repository-url]
 cd whatsappagent
 ```
 
-2. Instala las dependencias:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Crea un archivo `.env` en la raíz del proyecto basado en `.env.example`:
+3. Create a `.env` file in the project root based on `.env.example`:
 ```bash
 cp .env.example .env
 ```
 
-4. Configura las variables de entorno en `.env` según tus necesidades:
+4. Configure environment variables in `.env` according to your needs:
 
 ```env
 # OpenAI Configuration
-OPENAI_API_KEY=tu_api_key_de_openai
+OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-3.5-turbo
-# Si usas un proveedor alternativo, configura el endpoint:
-# OPENAI_BASE_URL=https://api.tu-proveedor.com/v1
+# If using an alternative provider, configure the endpoint:
+# OPENAI_BASE_URL=https://api.your-provider.com/v1
 
-# Configuración del asistente
+# Assistant Configuration
 MAX_TOKENS=512
 HISTORY_SIZE=6
 MODEL_TEMPERATURE=0.2
 
-# Configuración del servidor
+# Server Configuration
 PORT=3000
 HOST=0.0.0.0
 NODE_ENV=development
 
-# Configuración de base de datos
-DB_TYPE=sqlite  # sqlite, sqlserver, o supabase
+# Database Configuration
+DB_TYPE=sqlite  # sqlite, sqlserver, or supabase
 
-# Para producción con SQL Server:
+# For production with SQL Server:
 # DB_TYPE=sqlserver
-# DB_USER=usuario_sql_server
-# DB_PASSWORD=contraseña_sql_server
-# DB_SERVER=host_sql_server
-# DB_NAME=nombre_base_datos
+# DB_USER=sql_server_user
+# DB_PASSWORD=sql_server_password
+# DB_SERVER=sql_server_host
+# DB_NAME=database_name
 
-# Para producción con Supabase:
+# For production with Supabase:
 # DB_TYPE=supabase
-# SUPABASE_URL=https://tu-proyecto.supabase.co
-# SUPABASE_KEY=tu-key-de-supabase
+# SUPABASE_URL=https://your-project.supabase.co
+# SUPABASE_KEY=your-supabase-key
 
-# Configuración de canales habilitados
+# Enabled Channel Configuration
 CHANNEL_TELEGRAM_ENABLED=true
 CHANNEL_EMAIL_ENABLED=true
 CHANNEL_SIP_ENABLED=true
@@ -94,232 +94,233 @@ CHANNEL_TWILIO_ENABLED=true
 CHANNEL_WABA_ENABLED=true
 CHANNEL_WEBRTC_ENABLED=true
 
-# Configuración de WhatsApp Business API
-WABA_PHONE_NUMBER_ID=tu_phone_number_id
-WABA_ACCESS_TOKEN=tu_access_token
+# WhatsApp Business API Configuration
+WABA_PHONE_NUMBER_ID=your_phone_number_id
+WABA_ACCESS_TOKEN=your_access_token
 
-# Configuración de Twilio
-TWILIO_ACCOUNT_SID=tu_account_sid
-TWILIO_AUTH_TOKEN=tu_auth_token
-TWILIO_NUMBER=tu_numero_twilio
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_NUMBER=your_twilio_number
 TWILIO_ALLOW_AUDIO_FILES=true
 
-# Configuración de Telegram
-TELEGRAM_BOT_TOKEN=tu_bot_token
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_ALLOW_AUDIO_FILES=true
 
-# Configuración de WebRTC
+# WebRTC Configuration
 WEBRTC_PORT=8080
 
-# Configuración de almacenamiento para audios
+# Audio Storage Configuration
 STORAGE_TYPE=local
 LOCAL_STORAGE_PUBLIC_URL=http://localhost:3000/uploads
 
-# Configuración de correo SMTP
-SMTP_HOST=tu_servidor_smtp
+# SMTP Mail Configuration
+SMTP_HOST=your_smtp_server
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=tu_usuario
-SMTP_PASS=tu_contraseña
-SMTP_FROM_NAME=Nombre del remitente
-SMTP_FROM_EMAIL=email@remitente.com
+SMTP_USER=your_username
+SMTP_PASS=your_password
+SMTP_FROM_NAME=Sender Name
+SMTP_FROM_EMAIL=sender@email.com
 
-# Configuración de servicios de voz
-SPEECH_SERVICE=elevenlabs  # elevenlabs o deepgram
+# Voice Services Configuration
+SPEECH_SERVICE=elevenlabs  # elevenlabs or deepgram
 
-# Configuración de ElevenLabs
-ELEVENLABS_API_KEY=tu_api_key
-ELEVENLABS_VOICE_ID=tu_voice_id
+# ElevenLabs Configuration
+ELEVENLABS_API_KEY=your_api_key
+ELEVENLABS_VOICE_ID=your_voice_id
 
-# Configuración de Deepgram
-DEEPGRAM_API_KEY=tu_api_key
+# Deepgram Configuration
+DEEPGRAM_API_KEY=your_api_key
 DEEPGRAM_MODEL_SST=nova-2
 DEEPGRAM_MODEL_TTS=aura-asteria-en
 ```
 
-## 🚀 Comandos Disponibles
+## 🚀 Available Commands
 
-- `npm run setup-db`: Configura la base de datos principal (tablas genéricas)
-- `npm run setup-client-db`: Configura la base de datos del cliente (tablas específicas)
-- `npm run mcp-servers`: Gestiona los servidores MCP conectados
-- `npm run start-api`: Inicia el servidor API (en modo desarrollo)
-- `npm run compile`: Compila el código TypeScript
-- `npm start`: Inicia en modo producción (después de la compilación)
+- `npm run setup-db`: Set up the main database (generic tables)
+- `npm run setup-client-db`: Set up the client database (specific tables)
+- `npm run mcp-servers`: Manage connected MCP servers
+- `npm run start-api`: Start the API server (development mode)
+- `npm run compile`: Compile TypeScript code
+- `npm start`: Start in production mode (after compilation)
 
-## 📚 Estructura del Proyecto
+## 📚 Project Structure
 
 ```
 src/
-├── channels/           # Parsers y envío para cada canal (twilio, waba, etc.)
-├── clientConfig/       # Configuración específica del cliente
-│   ├── database/       # Base de datos específica del cliente
-│   ├── tools/          # Herramientas específicas del cliente
-│   ├── scripts/        # Scripts de inicialización del cliente
-│   └── prompt.ts       # Prompt del asistente
-├── config/             # Configuración general del servidor
-├── controllers/        # Controladores de la API (webhook principal)
-├── database/           # Configuración y modelos de base de datos genérica
-├── schemas/            # Esquemas de validación
-├── services/           # Servicios comunes
-│   ├── ai/             # Servicios de inteligencia artificial
-│   ├── audio/          # Servicios de audio
-│   ├── mcp/            # Servicios relacionados con Model Context Protocol
-│   └── webrtc/         # Servicios WebRTC
-├── utils/              # Utilidades
-└── index.ts            # Punto de entrada de la aplicación
+├── channels/           # Parsers and sending for each channel (twilio, waba, etc.)
+├── clientConfig/       # Client-specific configuration
+│   ├── database/       # Client-specific database
+│   ├── tools/          # Client-specific tools
+│   ├── scripts/        # Client initialization scripts
+│   └── prompt.ts       # Assistant prompt
+├── config/             # General server configuration
+├── controllers/        # API controllers (main webhook)
+├── database/           # Generic database configuration and models
+├── schemas/            # Validation schemas
+├── services/           # Common services
+│   ├── ai/             # Artificial intelligence services
+│   ├── audio/          # Audio services
+│   ├── mcp/            # Model Context Protocol related services
+│   └── webrtc/         # WebRTC services
+├── utils/              # Utilities
+└── index.ts            # Application entry point
 ```
 
-## 🌐 Soporte Multi-Canal
+## 🌐 Multi-Channel Support
 
-El asistente soporta múltiples canales de comunicación:
+The assistant supports multiple communication channels:
 
 ### WhatsApp (Twilio)
-- Integración con Twilio para mensajes de WhatsApp
-- Soporte para mensajes de voz (STT/TTS)
-- Webhook: `/assistant` (formato TwiML)
+- Integration with Twilio for WhatsApp messages
+- Voice message support (STT/TTS)
+- Webhook: `/assistant` (TwiML format)
 
 ### WhatsApp Business API (WABA)
-- Integración nativa con la API de WhatsApp Business de Meta
-- Webhook: `/assistant` (formato JSON)
+- Native integration with Meta's WhatsApp Business API
+- Webhook: `/assistant` (JSON format)
 
 ### Telegram
-- Bot de Telegram con soporte para mensajes de texto
-- Configurable mediante variables de entorno
+- Telegram bot with text message support
+- Configurable via environment variables
+- Webhook: `/assistant` (JSON format)
 
 ### Email
-- Integración con servidores SMTP
-- Envío y recepción de correos electrónicos
+- Integration with SMTP servers
+- Sending and receiving emails
 
 ### SIP (Voice Calls)
-- Llamadas de voz a través del protocolo SIP
-- Integración con servidores SIP
+- Voice calls through the SIP protocol
+- Integration with SIP servers
 
 ### WebRTC
-- Llamadas de voz y video en tiempo real
-- Servidor WebSocket para señalización
+- Real-time voice and video calls
+- WebSocket server for signaling
 
-## 🔧 Configuración de Base de Datos
+## 🔧 Database Configuration
 
-### Desarrollo Local
-Por defecto, la aplicación usa SQLite en desarrollo. Las bases de datos se crean automáticamente:
-- `chat.db`: Base de datos principal para conversaciones
-- `client.db`: Base de datos específica del cliente
+### Local Development
+By default, the application uses SQLite in development. Databases are created automatically:
+- `chat.db`: Main database for conversations
+- `client.db`: Client-specific database
 
-### Producción
-En producción, puedes usar **SQL Server** o **Supabase**. Configura las siguientes variables de entorno según el motor:
+### Production
+In production, you can use **SQL Server** or **Supabase**. Configure the following environment variables according to the engine:
 
 #### SQL Server
 ```env
 DB_TYPE=sqlserver
-DB_USER=usuario_sql_server
-DB_PASSWORD=contraseña_sql_server
-DB_SERVER=host_sql_server
-DB_NAME=nombre_base_datos
+DB_USER=sql_server_user
+DB_PASSWORD=sql_server_password
+DB_SERVER=sql_server_host
+DB_NAME=database_name
 ```
 
 #### Supabase
 ```env
 DB_TYPE=supabase
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_KEY=tu-key-de-supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-key
 ```
 
-## 📝 Uso de la API
+## 📝 API Usage
 
-### Endpoint Principal
+### Main Endpoint
 ```http
 POST /assistant
-Content-Type: application/json o application/x-www-form-urlencoded
+Content-Type: application/json or application/x-www-form-urlencoded
 ```
 
-### Identificación de Usuarios
-El sistema identifica a los usuarios por la combinación de `provider` y `external_id`, permitiendo conversaciones unificadas aunque el usuario cambie de canal.
+### User Identification
+The system identifies users by the combination of `provider` and `external_id`, allowing unified conversations even when the user changes channels.
 
-### Ejemplo de Respuesta
+### Response Example
 - **Twilio:** XML (TwiML)
-- **WABA:** Mensaje enviado vía API de Meta
-- **Telegram:** Mensaje enviado vía API de Telegram
-- **Email:** Correo electrónico enviado vía SMTP
+- **WABA:** Message sent via Meta API
+- **Telegram:** Message sent via Telegram API
+- **Email:** Email sent via SMTP
 
 ## 🔌 Model Context Protocol (MCP) Integration
 
-Esta API incluye integración con Model Context Protocol (MCP), lo que permite conectar el asistente con servidores remotos que exponen recursos y herramientas.
+This API includes integration with Model Context Protocol (MCP), which allows connecting the assistant with remote servers that expose resources and tools.
 
-### Gestión de servidores MCP
-Puedes gestionar los servidores MCP usando el comando:
+### MCP Server Management
+You can manage MCP servers using the command:
 ```bash
 npm run mcp-servers <list|add|update|delete> [args...]
 ```
 
-Ejemplos:
+Examples:
 ```bash
-# Listar todos los servidores
+# List all servers
 npm run mcp-servers list
 
-# Agregar un nuevo servidor
-npm run mcp-servers add nombre-servidor http://url-del-servidor/mcp version
+# Add a new server
+npm run mcp-servers add server-name http://server-url/mcp version
 
-# Actualizar un servidor existente
-npm run mcp-servers update id nombre-servidor http://url-del-servidor/mcp version
+# Update an existing server
+npm run mcp-servers update id server-name http://server-url/mcp version
 
-# Eliminar un servidor
+# Delete a server
 npm run mcp-servers delete id
 ```
 
-## 🔄 Extensibilidad
+## 🔄 Extensibility
 
-### Agregar Nuevos Canales
-1. Crea un nuevo archivo en la carpeta `src/channels/`
-2. Implementa las funciones `parseMessage` y `sendMessage`
-3. Registra el canal en el dispatcher
+### Adding New Channels
+1. Create a new file in the `src/channels/` folder
+2. Implement the `parseMessage` and `sendMessage` functions
+3. Register the channel in the dispatcher
 
-### Agregar Nuevas Herramientas
-1. Crea un nuevo archivo en `src/clientConfig/tools/`
-2. Registra la herramienta en `src/clientConfig/allTools.ts`
+### Adding New Tools
+1. Create a new file in `src/clientConfig/tools/`
+2. Register the tool in `src/clientConfig/allTools.ts`
 
-## 🚀 Despliegue
+## 🚀 Deployment
 
-### Despliegue en Servidor Local
-1. Configura todas las variables de entorno necesarias
-2. Ejecuta los comandos de inicialización:
+### Local Server Deployment
+1. Configure all necessary environment variables
+2. Run initialization commands:
 ```bash
 npm run setup-db
 npm run setup-client-db
 ```
-3. Inicia el servidor:
+3. Start the server:
 ```bash
 npm run start-api
 ```
 
-### Despliegue en Producción
-1. Configura las variables de entorno para producción
-2. Usa una base de datos SQL Server o Supabase
-3. Compila el código TypeScript:
+### Production Deployment
+1. Configure environment variables for production
+2. Use a SQL Server or Supabase database
+3. Compile the TypeScript code:
 ```bash
 npm run compile
 ```
-4. Inicia el servidor en modo producción:
+4. Start the server in production mode:
 ```bash
 npm start
 ```
 
-### Despliegue en Servicios en la Nube
-El proyecto puede desplegarse en servicios como:
+### Cloud Service Deployment
+The project can be deployed on services such as:
 - AWS EC2
 - Google Cloud Platform
 - Microsoft Azure
 - DigitalOcean
 - Heroku
-- Vercel (para versiones sin WebSocket)
+- Vercel (for versions without WebSocket)
 
-## 📄 Licencia
+## 📄 License
 
 MIT
 
-## 👥 Contribución
+## 👥 Contribution
 
-1. Haz fork del proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1. Fork the project
+2. Create a branch for your feature (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
