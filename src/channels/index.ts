@@ -3,6 +3,7 @@ import * as waba from './waba';
 import * as webrtc from './webrtc';
 import * as telegram from './telegram';
 import * as email from './email';
+import * as sip from './sip';
 import { isChannelEnabled } from '../config/channels';
 
 export const CHANNEL_META_MAP: Record<string, { CHANNEL_TYPE: string }> = {
@@ -11,6 +12,7 @@ export const CHANNEL_META_MAP: Record<string, { CHANNEL_TYPE: string }> = {
   webrtc: { CHANNEL_TYPE: webrtc.CHANNEL_TYPE },
   telegram: { CHANNEL_TYPE: telegram.CHANNEL_TYPE },
   email: { CHANNEL_TYPE: email.CHANNEL_TYPE },
+  sip: { CHANNEL_TYPE: sip.CHANNEL_TYPE },
   // ...otros canales
 };
 
@@ -20,6 +22,7 @@ export function detectChannel(body: any) {
   if (body.type && (body.type === 'audio' || body.type === 'text' || body.type === 'call_start' || body.type === 'call_end') && isChannelEnabled('webrtc')) return 'webrtc';
   if (body.message || body.edited_message && isChannelEnabled('telegram')) return 'telegram';
   if (body.to && (body.from || body.sender) && (body.subject || body.text || body.html) && isChannelEnabled('email')) return 'email';
+  if (body.sipCallId && body.type === 'sip_call' && isChannelEnabled('sip')) return 'sip';
   return null;
 }
 
@@ -30,6 +33,7 @@ export async function parseMessage(body: any) {
   if (channel === 'webrtc' && isChannelEnabled('webrtc')) return webrtc.parseWebRTCMessage(body);
   if (channel === 'telegram' && isChannelEnabled('telegram')) return telegram.parseTelegramMessage(body);
   if (channel === 'email' && isChannelEnabled('email')) return email.parseEmailMessage(body);
+  if (channel === 'sip' && isChannelEnabled('sip')) return sip.parseSIPMessage(body);
   throw new Error('Unknown channel');
 }
 
@@ -39,6 +43,7 @@ const senders: Record<string, (to: string, text: string, reply?: any, isAudio?: 
   webrtc: (to, text, reply, isAudio) => webrtc.sendWebRTCResponse(to, text, reply?.sessionId || ''),
   telegram: (to, text, reply, isAudio) => telegram.sendTelegramMessage(to, text, isAudio),
   email: (to, text, reply) => email.sendEmailMessage(to, text, reply?.subject, reply),
+  sip: (to, text, reply, isAudio) => sip.sendSIPMessage(to, text, reply?.callId, isAudio),
 };
 
 export async function sendMessage(provider: string, to: string, text: string, reply?: any, isAudio?: boolean) {

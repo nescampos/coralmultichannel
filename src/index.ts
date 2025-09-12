@@ -6,6 +6,8 @@ import { ServerLifecycle } from './utils/serverLifecycle';
 import { AssistantController } from './controllers/assistantController';
 import path from 'path';
 import { WebRTCServer } from './services/webrtc/websocketServer';
+import { sipConfig } from './config/sip';
+import { initializeSIP } from './channels/sip';
 import { isChannelEnabled } from './config/channels';
 
 async function startServer() {
@@ -39,6 +41,18 @@ async function startServer() {
             console.log(`WebRTC WebSocket server initialized on port ${serverListenConfig.webrtc.port}`);
         } else if (!isChannelEnabled('webrtc') && serverListenConfig.webrtc.port !== undefined) {
             //console.log('WebRTC channel is disabled, WebSocket server not initialized');
+        }
+
+        if (isChannelEnabled('sip') && sipConfig.enabled) {
+            await initializeSIP({
+              provider: sipConfig.provider,
+              sipUri: sipConfig.sipUri,
+              password: sipConfig.password,
+              wsServers: sipConfig.wsServers,
+              displayName: sipConfig.displayName,
+              //drachtio: sipConfig.drachtio,
+              //ari: sipConfig.ari
+            });
         }
     } catch (err) {
         console.log(err);
