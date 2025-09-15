@@ -11,7 +11,7 @@ export const sipConfig = {
   displayName: process.env.SIP_DISPLAY_NAME || 'AI Agent',
 
   // drachtio
-  /** drachtio: process.env.DRACHTIO_HOST ? {
+  drachtio: process.env.DRACHTIO_HOST ? {
     host: process.env.DRACHTIO_HOST!,
     port: Number(process.env.DRACHTIO_PORT || 9022),
     secret: process.env.DRACHTIO_SECRET,
@@ -19,7 +19,7 @@ export const sipConfig = {
   } : undefined,
 
   // asterisk ARI
-  ari: process.env.ARI_URL ? {
+  /** ari: process.env.ARI_URL ? {
     url: process.env.ARI_URL!,
     username: process.env.ARI_USERNAME!,
     password: process.env.ARI_PASSWORD!,

@@ -1,7 +1,8 @@
 import { UserAgent, Session, Invitation, Registerer, RegistererState, URI, SessionDescriptionHandler, SessionDescriptionHandlerOptions, SessionDescriptionHandlerModifier, BodyAndContentType } from 'sip.js';
 import { ISIPProvider, SIPInitConfig, SIPCallInfo } from '../ISIPProvider';
 import { handleIncomingSIPCall } from '../../sip';
-//import { SessionDescriptionHandler } from 'sip.js/lib/platform/web';
+import { textToSpeech } from '../../../services/ai/speech';
+import { uploadAudioAndGetUrl } from '../../../services/audio/uploadService';
 
 // SessionDescriptionHandler personalizado para Node.js
 // SessionDescriptionHandler personalizado para Node.js
@@ -186,16 +187,21 @@ export class SipJsProvider implements ISIPProvider {
   async sendTextOrAudio(to: string, text: string, callId?: string, isAudio: boolean = true) {
     console.log(`Enviando mensaje SIP a ${to}: ${text} (Audio: ${isAudio}, Call ID: ${callId})`);
     
-    // Aquí podrías implementar la lógica para enviar audio real
-    // Por ahora, solo logueamos el mensaje
     if (isAudio) {
-      console.log(`[AUDIO] ${text}`);
-      // TODO: Implementar envío de audio real usando textToSpeech
+      try {
+        const audioBuffer = await textToSpeech(text);
+        const url = await uploadAudioAndGetUrl(audioBuffer);
+        console.log(`[AUDIO URL] ${url}`);
+        // Nota: Actualmente no se está enviando RTP al peer SIP; solo se genera y publica el audio.
+        return { status: 'audio_generated', callId };
+      } catch (err: any) {
+        console.error('Error generando/enviando audio:', err?.message || err);
+        return { status: 'audio_failed', callId };
+      }
     } else {
       console.log(`[TEXT] ${text}`);
+      return { status: 'text_sent', callId };
     }
-    
-    return { status: isAudio ? 'audio_sent' : 'text_sent', callId };
   }
 
 

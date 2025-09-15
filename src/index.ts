@@ -50,7 +50,7 @@ async function startServer() {
               password: sipConfig.password,
               wsServers: sipConfig.wsServers,
               displayName: sipConfig.displayName,
-              //drachtio: sipConfig.drachtio,
+              drachtio: sipConfig.drachtio,
               //ari: sipConfig.ari
             });
         }

@@ -28,6 +28,7 @@
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",
     "dotenv": "^16.5.0",
+    "drachtio-srf": "^5.0.12",
     "fastify": "^5.3.3",
     "mssql": "^11.0.1",
     "nodemailer": "^7.0.6",

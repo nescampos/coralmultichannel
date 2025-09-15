@@ -1,6 +1,9 @@
 import { ISIPProvider, SIPInitConfig } from './sip/ISIPProvider';
 import { SipJsProvider } from './sip/providers/SipJsProvider';
+import { DrachtioProvider } from './sip/providers/DrachtioProvider';
 import { messageService } from '../services/messageService';
+import dotenv from 'dotenv';
+dotenv.config();
 
 //import { DrachtioProvider } from './sip/providers/DrachtioProvider';
 //import { AsteriskARIProvider } from './sip/providers/AsteriskARIProvider';
@@ -14,7 +17,7 @@ class SIPManager {
     if (this.provider) return;
 
     if (config.provider === 'ws') this.provider = new SipJsProvider();
-    //else if (config.provider === 'drachtio') this.provider = new DrachtioProvider();
+    else if (config.provider === 'drachtio') this.provider = new DrachtioProvider();
     //else if (config.provider === 'ari') this.provider = new AsteriskARIProvider();
     else throw new Error('Unsupported SIP provider');
 
@@ -80,22 +83,19 @@ export async function handleIncomingSIPCall(callId: string, callerId: string) {
   try {
     console.log(`Procesando llamada SIP entrante: ${callerId} (Call ID: ${callId})`);
     
-    // Crear un mensaje de bienvenida
-    const welcomeMessage = {
-      from: callerId,
-      text: 'Llamada SIP iniciada',
-      provider: 'sip',
-      isAudio: true,
-      callId: callId
-    };
+    // Saludo inicial desde .env si está configurado
+    const initialMessage = process.env.INITIAL_MESSAGE || process.env.SIP_INITIAL_MESSAGE;
+    if (initialMessage && initialMessage.trim().length > 0) {
+      await sendSIPMessage(callerId, initialMessage, callId, true);
+      return initialMessage;
+    }
 
-    // Procesar el mensaje con el asistente
+    // Fallback: procesar con el asistente (mensaje por defecto)
     const response = await messageService.processUserMessage(
       'sip',
       callerId,
       'Hola, soy tu asistente de voz. ¿En qué puedo ayudarte?',
       undefined,
-      //callId
     );
 
     console.log(`Respuesta del asistente para ${callerId}: ${response}`);
