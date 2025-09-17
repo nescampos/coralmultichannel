@@ -1,7 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { ToolConfig } from "../../utils/toolConfig";
 import { MCPServerService } from "./mcpServerService";
+import "dotenv/config";
+
+const coralServerUrl = process.env.CORAL_SERVER_URL;
+const coralAgentId = process.env.CORAL_AGENT_ID;
+const coralAgentDescription = process.env.CORAL_AGENT_DESCRIPTION;
 
 interface MCPClientConfig 
 {
@@ -36,7 +42,7 @@ export class MCPClientManager
         }
 
         console.log(`Connecting to ${this.serverConfigs.length} MCP servers...`);
-        
+
         for (const config of this.serverConfigs) {
             try {
                 await this.addClient(config);
@@ -44,6 +50,14 @@ export class MCPClientManager
             } catch (error) {
                 console.error(`Error connecting to MCP server ${config.name}:`, error);
             }
+        }
+        if (coralServerUrl && coralAgentId && coralAgentDescription) {
+            const queryString = `?agentId=${encodeURIComponent(coralAgentId)}&agentDescription=${encodeURIComponent(coralAgentDescription)}`;
+            const coralServer = new SSEClientTransport(new URL(coralServerUrl + queryString));
+            const coralClient = new Client({name: "coral",version: "1.0.0",agentId: coralAgentId,agentDescription: coralAgentDescription});
+            await coralClient.connect(coralServer);
+            this.clients.set("coral", coralClient);
+            console.log(`Connected to Coral server`);
         }
     }
     
