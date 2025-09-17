@@ -1,9 +1,10 @@
-# Multi-Channel Assistant API
+# Coral Multi-Channel Assistant
 
-An intelligent virtual assistant API specialized with multi-channel integration for WhatsApp (Twilio and native WhatsApp Business API), Telegram, Email, SIP, and WebRTC.
+An intelligent virtual assistant specialized with multi-channel integration for WhatsApp (Twilio and native WhatsApp Business API), Telegram, Email, SIP, and WebRTC.
 
 ## 🚀 Features
 
+- Integration with [Coral Protocol](https://www.coralprotocol.org/) for multiagent support and connection with external agents built the technology.
 - Intelligent virtual assistant using OpenAI or compatible services
 - Automatic conversation handling per user
 - Multi-channel integration:
@@ -33,13 +34,14 @@ An intelligent virtual assistant API specialized with multi-channel integration 
   - SIP configuration (for voice calls)
 - SQL Server or Supabase (production only)
 - ElevenLabs or Deepgram (for voice messages, optional)
+- A [Coral server](https://www.coralprotocol.org/) instance (Docker or custom)
 
 ## 🛠️ Installation
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd whatsappagent
+git clone https://github.com/nescampos/coralmultichannel
+cd coralmultichannel
 ```
 
 2. Install dependencies:
@@ -135,6 +137,11 @@ ELEVENLABS_VOICE_ID=your_voice_id
 DEEPGRAM_API_KEY=your_api_key
 DEEPGRAM_MODEL_SST=nova-2
 DEEPGRAM_MODEL_TTS=aura-asteria-en
+
+# Coral Configuration
+CORAL_SERVER_URL=your_coral_server_url (maybe http://localhost:5555)
+CORAL_AGENT_ID=your_coral_agent_id
+CORAL_AGENT_DESCRIPTION=your_coral_agent_description
 ```
 
 ## 🚀 Available Commands
@@ -316,11 +323,3 @@ The project can be deployed on services such as:
 ## 📄 License
 
 MIT
-
-## 👥 Contribution
-
-1. Fork the project
-2. Create a branch for your feature (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
